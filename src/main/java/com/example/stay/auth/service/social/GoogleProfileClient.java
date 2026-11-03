@@ -2,7 +2,7 @@ package com.example.stay.auth.service.social;
 
 import com.example.stay.auth.enums.SocialProvider;
 import com.example.stay.common.BusinessException;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -24,7 +24,7 @@ class GoogleProfileClient extends AbstractRestProfileClient {
         Map<String, Object> body = getJson("https://www.googleapis.com/oauth2/v3/userinfo", accessToken);
         String id = str(body.get("sub"));
         if (id == null) {
-            throw new BusinessException(ErrorCode.SOCIAL_AUTH_FAILED);
+            throw new BusinessException(AuthErrorCode.SOCIAL_AUTH_FAILED);
         }
         return new SocialProfile(id, str(body.get("email")), bool(body.get("email_verified")), str(body.get("name")));
     }

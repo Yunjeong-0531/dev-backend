@@ -7,7 +7,7 @@ import com.example.stay.auth.enums.RevokedReason;
 import com.example.stay.auth.repository.SocialAccountRepository;
 import com.example.stay.auth.repository.UserRepository;
 import com.example.stay.common.BusinessException;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,9 +46,9 @@ public class UserService {
 
     private User findActive(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
         if (user.isWithdrawn()) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+            throw new BusinessException(AuthErrorCode.USER_NOT_FOUND);
         }
         return user;
     }

@@ -3,7 +3,7 @@ package com.example.stay.auth.controller;
 import com.example.stay.auth.dto.ChangePasswordRequest;
 import com.example.stay.auth.dto.TokenResponse;
 import com.example.stay.auth.dto.UserSummary;
-import com.example.stay.auth.security.AuthUser;
+import com.example.stay.common.security.AuthUser;
 import com.example.stay.auth.service.PasswordService;
 import com.example.stay.auth.service.UserService;
 import com.example.stay.common.ClientInfo;

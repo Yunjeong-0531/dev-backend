@@ -1,7 +1,7 @@
 package com.example.stay.auth.service.social;
 
 import com.example.stay.common.BusinessException;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
@@ -22,11 +22,11 @@ abstract class AbstractRestProfileClient implements SocialProfileClient {
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {
                     });
             if (body == null) {
-                throw new BusinessException(ErrorCode.SOCIAL_AUTH_FAILED);
+                throw new BusinessException(AuthErrorCode.SOCIAL_AUTH_FAILED);
             }
             return body;
         } catch (RestClientException e) {
-            throw new BusinessException(ErrorCode.SOCIAL_AUTH_FAILED);
+            throw new BusinessException(AuthErrorCode.SOCIAL_AUTH_FAILED);
         }
     }
 

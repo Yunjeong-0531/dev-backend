@@ -9,7 +9,7 @@ import com.example.stay.auth.repository.EmailVerificationRepository;
 import com.example.stay.auth.repository.UserRepository;
 import com.example.stay.common.BusinessException;
 import com.example.stay.common.EmailUtil;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import com.example.stay.common.TokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -42,17 +42,17 @@ public class EmailVerificationService {
     @Transactional
     public void verify(String rawToken) {
         EmailVerification ev = emailVerificationRepository.findByTokenHash(TokenUtil.sha256Hex(rawToken))
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_TOKEN));
         if (ev.isUsed()) {
-            throw new BusinessException(ErrorCode.TOKEN_ALREADY_USED);
+            throw new BusinessException(AuthErrorCode.TOKEN_ALREADY_USED);
         }
         if (ev.isExpired()) {
-            throw new BusinessException(ErrorCode.TOKEN_EXPIRED);
+            throw new BusinessException(AuthErrorCode.TOKEN_EXPIRED);
         }
         User user = ev.getUser();
         // 탈퇴했거나, 토큰 발급 이후 이메일이 바뀐 경우는 무효
         if (user.isWithdrawn() || !user.getEmail().equals(ev.getEmail())) {
-            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
         }
         ev.markUsed();
         user.verifyEmail();

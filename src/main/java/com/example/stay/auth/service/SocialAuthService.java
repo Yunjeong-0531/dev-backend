@@ -18,6 +18,8 @@ import com.example.stay.auth.repository.UserRepository;
 import com.example.stay.auth.service.social.SocialProfile;
 import com.example.stay.auth.service.social.SocialProfileClient;
 import com.example.stay.common.*;
+import com.example.stay.auth.exception.AuthErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,7 +80,7 @@ public class SocialAuthService {
             if (user.getStatus() == UserStatus.SUSPENDED) {
                 loginHistoryRepository.save(LoginHistory.fail(
                         user.getId(), user.getEmail(), method, "SUSPENDED", client.ip(), client.userAgent()));
-                throw new BusinessException(ErrorCode.ACCOUNT_SUSPENDED);
+                throw new BusinessException(AuthErrorCode.ACCOUNT_SUSPENDED);
             }
             user.recordLoginSuccess();
             loginHistoryRepository.save(LoginHistory.success(
@@ -92,7 +94,7 @@ public class SocialAuthService {
         // 같은 이메일의 기존 회원이 있으면 자동 연동하지 않는다 (계정 탈취 위험).
         // 이메일 로그인 후 설정에서 소셜 계정을 연동하도록 안내.
         if (verifiedEmail != null && userRepository.existsByEmail(verifiedEmail)) {
-            throw new BusinessException(ErrorCode.SOCIAL_EMAIL_CONFLICT);
+            throw new BusinessException(AuthErrorCode.SOCIAL_EMAIL_CONFLICT);
         }
 
         String rawSignupToken = TokenUtil.generate();
@@ -107,9 +109,9 @@ public class SocialAuthService {
     public TokenResponse complete(SocialCompleteRequest req, ClientInfo client) {
         PendingSocialSignup pending = pendingRepository
                 .findBySignupTokenHash(TokenUtil.sha256Hex(req.signupToken()))
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_SIGNUP_TOKEN));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_SIGNUP_TOKEN));
         if (pending.isExpired()) {
-            throw new BusinessException(ErrorCode.INVALID_SIGNUP_TOKEN);
+            throw new BusinessException(AuthErrorCode.INVALID_SIGNUP_TOKEN);
         }
 
         String email;
@@ -119,20 +121,29 @@ public class SocialAuthService {
             emailVerified = true;
         } else {
             if (req.email() == null || req.email().isBlank()) {
-                throw new BusinessException(ErrorCode.EMAIL_REQUIRED);
+                throw new BusinessException(AuthErrorCode.EMAIL_REQUIRED);
             }
             email = EmailUtil.normalize(req.email());
             emailVerified = false;      // 직접 입력한 이메일은 인증 메일로 확인
         }
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException(emailVerified
-                    ? ErrorCode.SOCIAL_EMAIL_CONFLICT : ErrorCode.DUPLICATE_EMAIL);
+                    ? AuthErrorCode.SOCIAL_EMAIL_CONFLICT : AuthErrorCode.DUPLICATE_EMAIL);
         }
 
-        User user = userRepository.save(User.createSocial(
-                email, resolveName(req, pending, email), normalizePhone(req.phone()), emailVerified));
-        socialAccountRepository.save(SocialAccount.link(
-                user, pending.getProvider(), pending.getProviderUserId(), pending.getProviderEmail()));
+        User user;
+        try {
+            user = userRepository.save(User.createSocial(
+                    email, resolveName(req, pending, email), normalizePhone(req.phone()), emailVerified));
+        } catch (DataIntegrityViolationException e) {   // 이메일 동시 가입
+            throw new BusinessException(AuthErrorCode.DUPLICATE_EMAIL);
+        }
+        try {
+            socialAccountRepository.save(SocialAccount.link(
+                    user, pending.getProvider(), pending.getProviderUserId(), pending.getProviderEmail()));
+        } catch (DataIntegrityViolationException e) {   // 같은 소셜 계정으로 동시 가입
+            throw new BusinessException(AuthErrorCode.SOCIAL_ALREADY_LINKED);
+        }
         termService.recordAgreements(user, req.agreedTermIds(), client.ip());
         pendingRepository.delete(pending);      // 일회용
 
@@ -152,14 +163,14 @@ public class SocialAuthService {
         try {
             return SocialProvider.valueOf(name.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw new BusinessException(ErrorCode.UNSUPPORTED_PROVIDER);
+            throw new BusinessException(AuthErrorCode.UNSUPPORTED_PROVIDER);
         }
     }
 
     private SocialProfileClient clientOf(SocialProvider provider) {
         SocialProfileClient c = clients.get(provider);
         if (c == null) {       // 예: APPLE (아직 미구현)
-            throw new BusinessException(ErrorCode.UNSUPPORTED_PROVIDER);
+            throw new BusinessException(AuthErrorCode.UNSUPPORTED_PROVIDER);
         }
         return c;
     }

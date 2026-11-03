@@ -2,7 +2,7 @@ package com.example.stay.auth.service.social;
 
 import com.example.stay.auth.enums.SocialProvider;
 import com.example.stay.common.BusinessException;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -21,7 +21,7 @@ class NaverProfileClient extends AbstractRestProfileClient {
         Map<String, Object> res = map(body.get("response"));
         String id = str(res.get("id"));
         if (id == null) {
-            throw new BusinessException(ErrorCode.SOCIAL_AUTH_FAILED);
+            throw new BusinessException(AuthErrorCode.SOCIAL_AUTH_FAILED);
         }
         // 네이버 계정 이메일은 네이버가 소유 검증한 값으로 취급
         String email = str(res.get("email"));

@@ -1,6 +1,6 @@
 package com.example.stay.auth.entity;
 
-import com.example.stay.auth.enums.UserRole;
+import com.example.stay.common.security.UserRole;
 import com.example.stay.auth.enums.UserStatus;
 import com.example.stay.common.BaseTimeEntity;
 import jakarta.persistence.*;

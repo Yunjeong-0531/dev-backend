@@ -2,7 +2,7 @@ package com.example.stay.auth.service.social;
 
 import com.example.stay.auth.enums.SocialProvider;
 import com.example.stay.common.BusinessException;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -20,7 +20,7 @@ class KakaoProfileClient extends AbstractRestProfileClient {
         Map<String, Object> body = getJson("https://kapi.kakao.com/v2/user/me", accessToken);
         String id = str(body.get("id"));
         if (id == null) {
-            throw new BusinessException(ErrorCode.SOCIAL_AUTH_FAILED);
+            throw new BusinessException(AuthErrorCode.SOCIAL_AUTH_FAILED);
         }
         Map<String, Object> account = map(body.get("kakao_account"));
         Map<String, Object> profile = map(account.get("profile"));

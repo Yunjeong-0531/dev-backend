@@ -8,10 +8,10 @@ import com.example.stay.auth.entity.User;
 import com.example.stay.auth.enums.RevokedReason;
 import com.example.stay.auth.enums.UserStatus;
 import com.example.stay.auth.repository.RefreshTokenRepository;
-import com.example.stay.auth.security.JwtProvider;
+import com.example.stay.common.security.JwtProvider;
 import com.example.stay.common.BusinessException;
 import com.example.stay.common.ClientInfo;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import com.example.stay.common.TokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +50,7 @@ public class AuthTokenService {
     public TokenResponse rotate(String rawRefreshToken, ClientInfo client) {
         String hash = TokenUtil.sha256Hex(rawRefreshToken);
         RefreshToken old = refreshTokenRepository.findByTokenHashForUpdate(hash)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN));
 
         if (old.isRevoked()) {
             if (old.getRevokedReason() == RevokedReason.ROTATED) {
@@ -59,20 +59,16 @@ public class AuthTokenService {
                 refreshTokenRepository.revokeAllByFamilyId(
                         old.getFamilyId(), RevokedReason.REUSE_DETECTED, LocalDateTime.now());
             }
-            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+            throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
         }
         if (old.isExpired()) {
-            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+            throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         User user = old.getUser();
-        if (user.getStatus() == UserStatus.WITHDRAWN) {
-            old.revoke(RevokedReason.WITHDRAWN);
-            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
-        }
-        if (user.getStatus() == UserStatus.SUSPENDED) {
-            old.revoke(RevokedReason.SUSPENDED);
-            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        if (user.getStatus() == UserStatus.WITHDRAWN || user.getStatus() == UserStatus.SUSPENDED) {
+            old.revoke(RevokedReason.LOGOUT);
+            throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         Issued next = issue(user, old.getFamilyId(), client);

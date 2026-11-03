@@ -7,7 +7,7 @@ import com.example.stay.auth.entity.User;
 import com.example.stay.auth.repository.TermAgreementRepository;
 import com.example.stay.auth.repository.TermRepository;
 import com.example.stay.common.BusinessException;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,11 +44,11 @@ public class TermService {
         activeTerms.forEach(t -> activeIds.add(t.getId()));
 
         if (!activeIds.containsAll(agreed)) {
-            throw new BusinessException(ErrorCode.INVALID_TERMS);
+            throw new BusinessException(AuthErrorCode.INVALID_TERMS);
         }
         for (Term t : activeTerms) {
             if (t.isRequired() && !agreed.contains(t.getId())) {
-                throw new BusinessException(ErrorCode.REQUIRED_TERMS_NOT_AGREED);
+                throw new BusinessException(AuthErrorCode.REQUIRED_TERMS_NOT_AGREED);
             }
         }
         List<TermAgreement> agreements = activeTerms.stream()

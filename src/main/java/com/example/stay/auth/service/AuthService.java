@@ -12,9 +12,10 @@ import com.example.stay.auth.repository.UserRepository;
 import com.example.stay.common.BusinessException;
 import com.example.stay.common.ClientInfo;
 import com.example.stay.common.EmailUtil;
-import com.example.stay.common.ErrorCode;
+import com.example.stay.auth.exception.AuthErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,13 +47,18 @@ public class AuthService {
     public SignupResponse signup(SignupRequest req, ClientInfo client) {
         String email = EmailUtil.normalize(req.email());
         if (userRepository.existsByEmail(email)) {
-            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+            throw new BusinessException(AuthErrorCode.DUPLICATE_EMAIL);
         }
-        User user = userRepository.save(User.createLocal(
-                email,
-                passwordEncoder.encode(req.password()),
-                req.name().trim(),
-                normalizePhone(req.phone())));
+        User user;
+        try {
+            user = userRepository.save(User.createLocal(
+                    email,
+                    passwordEncoder.encode(req.password()),
+                    req.name().trim(),
+                    normalizePhone(req.phone())));
+        } catch (DataIntegrityViolationException e) {   // existsByEmail 이후 동시에 가입된 경우
+            throw new BusinessException(AuthErrorCode.DUPLICATE_EMAIL);
+        }
 
         termService.recordAgreements(user, req.agreedTermIds(), client.ip());
         emailVerificationService.issue(user);
@@ -80,11 +86,11 @@ public class AuthService {
         if (user == null || user.isWithdrawn()) {
             passwordEncoder.matches(req.password(), dummyHash);
             recordFail(null, email, "BAD_CREDENTIALS", client);
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+            throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
         }
         if (user.isLocked()) {
             recordFail(user.getId(), email, "LOCKED", client);
-            throw new BusinessException(ErrorCode.ACCOUNT_LOCKED);
+            throw new BusinessException(AuthErrorCode.ACCOUNT_LOCKED);
         }
         // 소셜 전용 계정(비밀번호 없음)도 동일한 에러
         boolean passwordOk;
@@ -97,15 +103,15 @@ public class AuthService {
         if (!passwordOk) {
             user.recordLoginFailure(props.maxLoginAttempts(), props.lockDuration());
             recordFail(user.getId(), email, "BAD_CREDENTIALS", client);
-            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+            throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
         }
         if (user.getStatus() == UserStatus.SUSPENDED) {
             recordFail(user.getId(), email, "SUSPENDED", client);
-            throw new BusinessException(ErrorCode.ACCOUNT_SUSPENDED);
+            throw new BusinessException(AuthErrorCode.ACCOUNT_SUSPENDED);
         }
         if (user.getStatus() == UserStatus.PENDING && props.requireEmailVerifiedForLogin()) {
             recordFail(user.getId(), email, "UNVERIFIED", client);
-            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
+            throw new BusinessException(AuthErrorCode.EMAIL_NOT_VERIFIED);
         }
 
         user.recordLoginSuccess();

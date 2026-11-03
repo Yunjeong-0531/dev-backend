@@ -9,6 +9,7 @@ import com.example.stay.auth.event.PasswordResetRequestedEvent;
 import com.example.stay.auth.repository.PasswordResetTokenRepository;
 import com.example.stay.auth.repository.UserRepository;
 import com.example.stay.common.*;
+import com.example.stay.auth.exception.AuthErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,16 +63,16 @@ public class PasswordService {
     @Transactional
     public void reset(String rawToken, String newPassword) {
         PasswordResetToken token = resetTokenRepository.findByTokenHash(TokenUtil.sha256Hex(rawToken))
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_TOKEN));
         if (token.isUsed()) {
-            throw new BusinessException(ErrorCode.TOKEN_ALREADY_USED);
+            throw new BusinessException(AuthErrorCode.TOKEN_ALREADY_USED);
         }
         if (token.isExpired()) {
-            throw new BusinessException(ErrorCode.TOKEN_EXPIRED);
+            throw new BusinessException(AuthErrorCode.TOKEN_EXPIRED);
         }
         User user = token.getUser();
         if (user.isWithdrawn()) {
-            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+            throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
         }
 
         // 1) 엔티티 변경
@@ -93,15 +94,15 @@ public class PasswordService {
     @Transactional
     public TokenResponse change(Long userId, String currentPassword, String newPassword, ClientInfo client) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
         if (user.isWithdrawn()) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+            throw new BusinessException(AuthErrorCode.USER_NOT_FOUND);
         }
         // 비밀번호가 이미 있으면 현재 비밀번호 확인 필수 (소셜 전용 가입자의 최초 설정은 예외)
         if (user.hasPassword()) {
             if (currentPassword == null
                     || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
-                throw new BusinessException(ErrorCode.CURRENT_PASSWORD_MISMATCH);
+                throw new BusinessException(AuthErrorCode.CURRENT_PASSWORD_MISMATCH);
             }
         }
         user.changePassword(passwordEncoder.encode(newPassword));

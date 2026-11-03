@@ -6,6 +6,5 @@ public enum RevokedReason {
     LOGOUT_ALL,
     REUSE_DETECTED,
     PASSWORD_CHANGED,
-    WITHDRAWN,
-    SUSPENDED
+    WITHDRAWN
 }

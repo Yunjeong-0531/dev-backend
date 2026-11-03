@@ -26,7 +26,7 @@ public class RateLimiter {
                 hits.pollFirst();
             }
             if (hits.size() >= maxRequests) {
-                throw new BusinessException(ErrorCode.TOO_MANY_REQUESTS);
+                throw new BusinessException(CommonErrorCode.TOO_MANY_REQUESTS);
             }
             hits.addLast(now);
         }

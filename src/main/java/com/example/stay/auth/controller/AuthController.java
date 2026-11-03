@@ -1,7 +1,7 @@
 package com.example.stay.auth.controller;
 
 import com.example.stay.auth.dto.*;
-import com.example.stay.auth.security.AuthUser;
+import com.example.stay.common.security.AuthUser;
 import com.example.stay.auth.service.AuthService;
 import com.example.stay.auth.service.EmailVerificationService;
 import com.example.stay.auth.service.PasswordService;
