@@ -1,5 +1,6 @@
 package com.example.stay.common;
 
+import com.example.stay.auth.config.SocialProperties;
 import com.example.stay.common.security.SecurityProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +11,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration
 @EnableAsync
 @EnableScheduling
-@EnableConfigurationProperties(SecurityProperties.class)
+@EnableConfigurationProperties({SecurityProperties.class, SocialProperties.class})
 public class AppConfig {
 }

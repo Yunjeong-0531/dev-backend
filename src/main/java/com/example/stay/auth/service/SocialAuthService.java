@@ -1,7 +1,9 @@
 package com.example.stay.auth.service;
 
 import com.example.stay.auth.config.AuthProperties;
+import com.example.stay.auth.config.SocialProperties;
 import com.example.stay.auth.dto.SocialCompleteRequest;
+import com.example.stay.auth.dto.SocialLoginRequest;
 import com.example.stay.auth.dto.SocialLoginResponse;
 import com.example.stay.auth.dto.TokenResponse;
 import com.example.stay.auth.entity.LoginHistory;
@@ -41,6 +43,7 @@ public class SocialAuthService {
     private final EmailVerificationService emailVerificationService;
     private final TermService termService;
     private final AuthProperties props;
+    private final SocialProperties socialProps;
 
     public SocialAuthService(List<SocialProfileClient> profileClients,
                              UserRepository userRepository,
@@ -50,7 +53,8 @@ public class SocialAuthService {
                              AuthTokenService tokenService,
                              EmailVerificationService emailVerificationService,
                              TermService termService,
-                             AuthProperties props) {
+                             AuthProperties props,
+                             SocialProperties socialProps) {
         profileClients.forEach(c -> clients.put(c.provider(), c));
         this.userRepository = userRepository;
         this.socialAccountRepository = socialAccountRepository;
@@ -60,6 +64,7 @@ public class SocialAuthService {
         this.emailVerificationService = emailVerificationService;
         this.termService = termService;
         this.props = props;
+        this.socialProps = socialProps;
     }
 
     /**
@@ -68,9 +73,10 @@ public class SocialAuthService {
      *  - 신규: 가입 대기 레코드를 만들고 signupToken 반환 (→ /social/complete 에서 약관 동의 후 가입 완료)
      */
     @Transactional(noRollbackFor = BusinessException.class)
-    public SocialLoginResponse login(String providerName, String providerAccessToken, ClientInfo client) {
+    public SocialLoginResponse login(String providerName, SocialLoginRequest req, ClientInfo client) {
         SocialProvider provider = parseProvider(providerName);
-        SocialProfile profile = clientOf(provider).fetch(providerAccessToken);
+        SocialProfileClient profileClient = clientOf(provider);
+        SocialProfile profile = profileClient.fetch(resolveAccessToken(provider, profileClient, req));
 
         var existing = socialAccountRepository
                 .findByProviderAndProviderUserId(provider, profile.providerUserId());
@@ -159,6 +165,36 @@ public class SocialAuthService {
     }
 
     // ------------------------------------------------------------------
+
+    /**
+     * 제공자 액세스 토큰을 얻는다.
+     *  - 인가 코드: redirectUri 가 "우리 프론트의 콜백 주소"와 정확히 같을 때만 교환한다
+     *    (frontend-base-url + /auth/callback/{provider}). 제공자 콘솔에 등록한 redirect URI 와 같아야 한다.
+     *  - 액세스 토큰: 개발용 설정(allow-access-token)일 때만 허용
+     */
+    private String resolveAccessToken(SocialProvider provider, SocialProfileClient profileClient,
+                                      SocialLoginRequest req) {
+        if (hasText(req.accessToken())) {
+            if (!socialProps.allowAccessToken()) {
+                throw new BusinessException(CommonErrorCode.INVALID_INPUT);
+            }
+            return req.accessToken();
+        }
+        if (!hasText(req.code()) || !hasText(req.redirectUri())) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT);
+        }
+        String expectedRedirect = props.frontendBaseUrl() + "/auth/callback/" + provider.name().toLowerCase(Locale.ROOT);
+        if (!expectedRedirect.equals(req.redirectUri())) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT);
+        }
+        return profileClient.exchangeCode(req.code(), req.redirectUri(), req.state());
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
+    }
+
+
     private SocialProvider parseProvider(String name) {
         try {
             return SocialProvider.valueOf(name.toUpperCase(Locale.ROOT));

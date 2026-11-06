@@ -6,7 +6,7 @@ spring:
     password: ${DB_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: none            # 스키마는 Flyway(db/migration)가 관리
+      ddl-auto: validate            # 스키마는 Flyway(db/migration)가 관리
     open-in-view: false
     properties:
       hibernate.jdbc.time_zone: Asia/Seoul
@@ -24,7 +24,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-    out-of-order: true          # 협업: 나중에 병합된 "더 낮은 버전" 마이그레이션도 적용
+    out-of-order: true  # 협업: 나중에 병합된 "더 낮은 버전" 마이그레이션도 적용
 logging:
   level:
     org.hibernate.SQL: DEBUG
@@ -54,4 +54,19 @@ app:
     lock-duration: 15m
     require-email-verified-for-login: false
     frontend-base-url: http://localhost:3000
-    mail-from: no-reply@example.com
+    mail-from: spring@green.com
+    initial-admin-email: ${INITIAL_ADMIN_EMAIL:}   # 최초 관리자 지정용 (비우면 사용 안 함)
+
+    # 소셜 로그인 (인가 코드 방식). client-secret 은 서버에만 둔다. 제공자 콘솔의 Redirect URI 는
+    # {frontend-base-url}/auth/callback/kakao | naver | google 로 등록한다.
+    social:
+      allow-access-token: true              # 개발용(토큰 직접 입력 화면). 운영에서는 false
+      kakao:
+        client-id: ${KAKAO_CLIENT_ID:}      # REST API 키
+        client-secret: ${KAKAO_CLIENT_SECRET:}
+      naver:
+        client-id: ${NAVER_CLIENT_ID:}
+        client-secret: ${NAVER_CLIENT_SECRET:}
+      google:
+        client-id: ${GOOGLE_CLIENT_ID:}
+        client-secret: ${GOOGLE_CLIENT_SECRET:}

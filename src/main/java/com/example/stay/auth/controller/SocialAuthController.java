@@ -33,7 +33,7 @@ public class SocialAuthController {
                                      HttpServletRequest http) {
         ClientInfo client = ClientInfo.from(http);
         rateLimiter.check("social-login:ip:" + client.ip(), 30, Duration.ofMinutes(1));
-        return socialAuthService.login(provider, req.accessToken(), client);
+        return socialAuthService.login(provider, req, client);
     }
 
     /** 소셜 가입 2단계: 약관 동의 + 추가 정보 입력 → 가입 완료 및 로그인 */

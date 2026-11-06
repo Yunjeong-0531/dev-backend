@@ -1,19 +1,38 @@
 package com.example.stay.auth.service.social;
 
+import com.example.stay.auth.config.SocialProperties;
 import com.example.stay.auth.enums.SocialProvider;
 import com.example.stay.common.BusinessException;
 import com.example.stay.auth.exception.AuthErrorCode;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
 
 import java.util.Map;
 
 @Component
 class NaverProfileClient extends AbstractRestProfileClient {
 
+    private final SocialProperties.Provider cred;
+
+    NaverProfileClient(SocialProperties props) {
+        this.cred = props.naver();
+    }
+
+
     @Override
     public SocialProvider provider() {
         return SocialProvider.NAVER;
     }
+
+
+    @Override
+    public String exchangeCode(String code, String redirectUri, String state) {
+        MultiValueMap<String, String> form = authorizationCodeForm(cred, code, redirectUri);
+        form.remove("redirect_uri");          // 네이버는 redirect_uri 대신 state 를 요구한다
+        form.add("state", state == null ? "" : state);
+        return exchange("https://nid.naver.com/oauth2.0/token", form);
+    }
+
 
     @Override
     public SocialProfile fetch(String accessToken) {

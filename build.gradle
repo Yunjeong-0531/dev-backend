@@ -56,6 +56,7 @@ dependencies {
 		//데이터베이스 스키마 변경 이력 관리
 		implementation 'org.flywaydb:flyway-core'
 		implementation 'org.flywaydb:flyway-mysql'
+		implementation 'org.springframework.boot:spring-boot-flyway'
 
 		//테스트 자동화
 		testImplementation 'org.springframework.boot:spring-boot-starter-test'

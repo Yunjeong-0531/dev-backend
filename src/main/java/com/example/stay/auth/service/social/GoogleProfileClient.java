@@ -1,5 +1,6 @@
 package com.example.stay.auth.service.social;
 
+import com.example.stay.auth.config.SocialProperties;
 import com.example.stay.auth.enums.SocialProvider;
 import com.example.stay.common.BusinessException;
 import com.example.stay.auth.exception.AuthErrorCode;
@@ -13,6 +14,17 @@ import java.util.Map;
  */
 @Component
 class GoogleProfileClient extends AbstractRestProfileClient {
+
+    private final SocialProperties.Provider cred;
+
+    GoogleProfileClient(SocialProperties props) {
+        this.cred = props.google();
+    }
+
+    @Override
+    public String exchangeCode(String code, String redirectUri, String state) {
+        return exchange("https://oauth2.googleapis.com/token", authorizationCodeForm(cred, code, redirectUri));
+    }
 
     @Override
     public SocialProvider provider() {

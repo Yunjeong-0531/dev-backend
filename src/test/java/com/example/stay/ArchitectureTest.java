@@ -1,4 +1,4 @@
-package com.example.stay.stay;
+package com.example.stay;
 
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;

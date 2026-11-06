@@ -1,0 +1,91 @@
+### 역할별 권한 수동 테스트 (IntelliJ HTTP Client / VS Code REST Client 공용)
+### 사용법: 아래 1)~3) 로그인 응답의 accessToken 을 변수에 붙여넣고, 4) 이후 요청을 하나씩 실행한다.
+### 준비: GUEST/HOST/ADMIN 계정 3개 (가입 후 README 의 "관리자/호스트 만들기" 참고)
+
+@host = http://localhost:8080
+@guestToken = 여기에_GUEST_accessToken
+@hostToken  = 여기에_HOST_accessToken
+@adminToken = 여기에_ADMIN_accessToken
+@accommodationId = 1
+@targetUserId = 2
+
+### 1) 로그인 — 세 역할 모두 "같은" 로그인 API 를 쓴다. 응답의 user.role 이 다를 뿐이다.
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "host@example.com", "password": "Passw0rd123" }
+
+### 2) 비로그인 조회 → 200
+GET {{host}}/api/accommodations
+
+### 3) 비로그인 등록 → 401 UNAUTHORIZED
+POST {{host}}/api/accommodations
+Content-Type: application/json
+
+{ "name": "하늘결 빌라", "region": "제주", "pricePerNight": 320000 }
+
+### 4) GUEST 등록 → 403 FORBIDDEN (@HostOrAdmin)
+POST {{host}}/api/accommodations
+Authorization: Bearer {{guestToken}}
+Content-Type: application/json
+
+{ "name": "하늘결 빌라", "region": "제주", "pricePerNight": 320000 }
+
+### 5) HOST 등록 → 201
+POST {{host}}/api/accommodations
+Authorization: Bearer {{hostToken}}
+Content-Type: application/json
+
+{ "name": "하늘결 빌라", "region": "제주", "pricePerNight": 320000 }
+
+### 6) 다른 HOST 의 숙소 수정 → 403 NOT_ACCOMMODATION_OWNER (서비스의 소유권 검사)
+#    (accommodationId 를 "다른 호스트가 등록한 숙소" id 로 바꿔서 실행)
+PATCH {{host}}/api/accommodations/{{accommodationId}}
+Authorization: Bearer {{hostToken}}
+Content-Type: application/json
+
+{ "name": "수정", "region": "제주", "pricePerNight": 100000 }
+
+### 7) ADMIN 은 남의 숙소도 수정 → 200
+PATCH {{host}}/api/accommodations/{{accommodationId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "관리자 수정", "region": "제주", "pricePerNight": 100000 }
+
+### 8) 입력 검증 실패 → 400 INVALID_INPUT (fieldErrors 포함)
+POST {{host}}/api/accommodations
+Authorization: Bearer {{hostToken}}
+Content-Type: application/json
+
+{ "name": "", "region": "제주", "pricePerNight": -1 }
+
+### 9) HOST 가 관리자 API 호출 → 403 (경로 규칙 /api/admin/** + @AdminOnly)
+GET {{host}}/api/admin/accommodations
+Authorization: Bearer {{hostToken}}
+
+### 10) ADMIN 이 관리자 API 호출 → 200
+GET {{host}}/api/admin/accommodations
+Authorization: Bearer {{adminToken}}
+
+### 11) ADMIN 이 회원 역할 변경 → 200 (대상의 세션은 모두 폐기되어 다시 로그인해야 한다)
+PATCH {{host}}/api/admin/users/{{targetUserId}}/role
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "role": "HOST" }
+
+### 12) ADMIN 이 "본인" 역할 변경 시도 → 400 CANNOT_CHANGE_OWN_ROLE
+#     (targetUserId 를 관리자 본인 id 로 바꿔서 실행)
+PATCH {{host}}/api/admin/users/{{targetUserId}}/role
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "role": "GUEST" }
+
+### 13) 잘못된 역할 값 → 400 INVALID_INPUT
+PATCH {{host}}/api/admin/users/{{targetUserId}}/role
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "role": "SUPERMAN" }

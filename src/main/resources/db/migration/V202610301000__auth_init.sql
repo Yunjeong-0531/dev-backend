@@ -23,7 +23,7 @@ CREATE TABLE users (
     status              ENUM('PENDING','ACTIVE','SUSPENDED','WITHDRAWN') NOT NULL DEFAULT 'PENDING'
                         COMMENT 'PENDING: 이메일 미인증 / WITHDRAWN: 탈퇴',
     email_verified_at   DATETIME         NULL,
-    failed_login_count  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    failed_login_count  INT UNSIGNED NOT NULL DEFAULT 0,
     locked_until        DATETIME         NULL     COMMENT '로그인 실패 누적 시 잠금 해제 시각',
     last_login_at       DATETIME         NULL,
     password_changed_at DATETIME         NULL,
@@ -141,7 +141,7 @@ CREATE TABLE terms (
     title         VARCHAR(100)    NOT NULL,
     content       MEDIUMTEXT      NOT NULL,
     is_required   TINYINT(1)      NOT NULL DEFAULT 1,
-    display_order SMALLINT        NOT NULL DEFAULT 0,
+    display_order INT        NOT NULL DEFAULT 0,
     is_active     TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '현재 가입 화면에 노출되는 버전',
     effective_at  DATETIME        NOT NULL COMMENT '시행일',
     created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,

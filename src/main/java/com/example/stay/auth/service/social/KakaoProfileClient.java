@@ -1,5 +1,6 @@
 package com.example.stay.auth.service.social;
 
+import com.example.stay.auth.config.SocialProperties;
 import com.example.stay.auth.enums.SocialProvider;
 import com.example.stay.common.BusinessException;
 import com.example.stay.auth.exception.AuthErrorCode;
@@ -10,9 +11,20 @@ import java.util.Map;
 @Component
 class KakaoProfileClient extends AbstractRestProfileClient {
 
+    private final SocialProperties.Provider cred;
+
+    KakaoProfileClient(SocialProperties props) {
+        this.cred = props.kakao();
+    }
+
     @Override
     public SocialProvider provider() {
         return SocialProvider.KAKAO;
+    }
+
+    @Override
+    public String exchangeCode(String code, String redirectUri, String state) {
+        return exchange("https://kauth.kakao.com/oauth/token", authorizationCodeForm(cred, code, redirectUri));
     }
 
     @Override
