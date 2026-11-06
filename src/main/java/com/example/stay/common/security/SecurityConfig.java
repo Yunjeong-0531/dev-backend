@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -35,6 +36,7 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity            // @AdminOnly, @HostOrAdmin, @PreAuthorize 사용
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -55,6 +57,9 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                    // 관리자 API 는 경로 규칙으로 한 번 더 막는다 (컨트롤러에 @AdminOnly 를 깜빡해도 안전).
+                    // 규칙: 관리자 전용 API 는 반드시 /api/admin/ 아래에 둘 것. 다른 규칙보다 먼저 등록해야 한다.
+                    auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
                     // 1) "공개 패턴 안의 예외(로그인 필요)" 를 먼저 등록해야 아래 공개 규칙에 가려지지 않는다
                     rules.stream().flatMap(r -> r.authenticatedPaths().stream())
                             .forEach(path -> auth.requestMatchers(path).authenticated());

@@ -8,6 +8,7 @@ import com.example.stay.auth.repository.SocialAccountRepository;
 import com.example.stay.auth.repository.UserRepository;
 import com.example.stay.common.BusinessException;
 import com.example.stay.auth.exception.AuthErrorCode;
+import com.example.stay.common.security.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,25 @@ public class UserService {
 
         // 벌크 쿼리는 마지막에 (위 변경이 먼저 flush 된다)
         tokenService.revokeAll(userId, RevokedReason.WITHDRAWN);
+    }
+
+    /**
+     * PATCH /api/admin/users/{userId}/role (ADMIN 전용).
+     *  - 본인의 역할은 바꿀 수 없다 (마지막 관리자가 스스로 권한을 잃는 사고 방지)
+     *  - 역할이 바뀐 사용자는 모든 세션을 폐기해 다시 로그인하게 한다 (액세스 토큰은 만료(기본 15분)까지 이전 역할로 유효)
+     */
+    @Transactional
+    public UserSummary changeRole(Long actorId, Long targetId, UserRole newRole) {
+        if (actorId.equals(targetId)) {
+            throw new BusinessException(AuthErrorCode.CANNOT_CHANGE_OWN_ROLE);
+        }
+        User target = findActive(targetId);
+        if (target.getRole() == newRole) {
+            return UserSummary.from(target);
+        }
+        target.changeRole(newRole);
+        tokenService.revokeAll(targetId, RevokedReason.ROLE_CHANGED);   // 벌크 쿼리는 마지막에
+        return UserSummary.from(target);
     }
 
     private User findActive(Long userId) {

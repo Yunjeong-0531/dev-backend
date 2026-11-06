@@ -5,6 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,12 +18,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
@@ -58,6 +59,18 @@ public class GlobalExceptionHandler {
         log.warn("Data integrity violation: {}", e.getMostSpecificCause().getMessage());
         return ResponseEntity.status(CommonErrorCode.CONFLICT.getStatus())
                 .body(ErrorResponse.of(CommonErrorCode.CONFLICT));
+    }
+
+    /**
+     * @AdminOnly / @HostOrAdmin / @PreAuthorize 실패. 이 핸들러가 없으면 아래 Exception 핸들러가 잡아 500 이 된다.
+     * 비로그인이면 401, 로그인했지만 권한이 없으면 403.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean anonymous = auth == null || auth instanceof AnonymousAuthenticationToken;
+        CommonErrorCode code = anonymous ? CommonErrorCode.UNAUTHORIZED : CommonErrorCode.FORBIDDEN;
+        return ResponseEntity.status(code.getStatus()).body(ErrorResponse.of(code));
     }
 
     @ExceptionHandler(Exception.class)

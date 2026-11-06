@@ -6,4 +6,12 @@ package com.example.stay.common.security;
  * (다른 feature 는 auth 의 User 엔티티가 아니라 이 id 만 참조할 것)
  */
 public record AuthUser(Long id, UserRole role) {
+
+    public boolean isAdmin() {
+        return role == UserRole.ADMIN;
+    }
+
+    public boolean isHost() {
+        return role == UserRole.HOST;
+    }
 }
