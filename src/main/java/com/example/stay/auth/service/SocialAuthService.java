@@ -21,6 +21,7 @@ import com.example.stay.auth.service.social.SocialProfile;
 import com.example.stay.auth.service.social.SocialProfileClient;
 import com.example.stay.common.*;
 import com.example.stay.auth.exception.AuthErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class SocialAuthService {
 
@@ -72,10 +74,21 @@ public class SocialAuthService {
      *  - 이미 연동된 계정: 바로 로그인
      *  - 신규: 가입 대기 레코드를 만들고 signupToken 반환 (→ /social/complete 에서 약관 동의 후 가입 완료)
      */
+
     @Transactional(noRollbackFor = BusinessException.class)
     public SocialLoginResponse login(String providerName, SocialLoginRequest req, ClientInfo client) {
+
+        log.info("1. providerName = {}", providerName);
         SocialProvider provider = parseProvider(providerName);
+
+        log.info("2. provider = {}", provider);
         SocialProfileClient profileClient = clientOf(provider);
+        log.info("3. profileClient = {}",
+                profileClient.getClass().getSimpleName());
+        log.info("kakao clientId = {}",
+                socialProps.kakao().clientId());
+        log.info("4. kakao configured = {}",
+                socialProps.kakao().configured());
         SocialProfile profile = profileClient.fetch(resolveAccessToken(provider, profileClient, req));
 
         var existing = socialAccountRepository

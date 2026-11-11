@@ -3,6 +3,7 @@ package com.example.stay.auth.service.social;
 import com.example.stay.auth.config.SocialProperties;
 import com.example.stay.common.BusinessException;
 import com.example.stay.auth.exception.AuthErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -10,9 +11,11 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Map;
 
+@Slf4j
 abstract class AbstractRestProfileClient implements SocialProfileClient {
 
     private final RestClient restClient = RestClient.create();
@@ -61,12 +64,39 @@ abstract class AbstractRestProfileClient implements SocialProfileClient {
                     .retrieve()
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {
                     });
+            if (body.containsKey("error")) {
+                log.error(
+                        "Social token error: {}, description: {}",
+                        body.get("error"),
+                        body.get("error_description")
+                );
+
+                throw new BusinessException(
+                        AuthErrorCode.SOCIAL_AUTH_FAILED
+                );
+            }
             String token = body == null ? null : str(body.get("access_token"));
+            log.info("token response: {}", body);
             if (token == null) {
+                log.error("Social token response has no access_token");
+
                 throw new BusinessException(AuthErrorCode.SOCIAL_AUTH_FAILED);
             }
             return token;
-        } catch (RestClientException e) {
+        } catch (RestClientResponseException e) {
+            log.error(
+                    "Social token API error. status={}, response={}",
+                    e.getStatusCode(),
+                    e.getResponseBodyAsString()
+            );
+
+            throw new BusinessException(
+                    AuthErrorCode.SOCIAL_AUTH_FAILED
+            );
+        }catch (RestClientException e) {
+
+            log.error("Social token API connection error", e);
+
             throw new BusinessException(AuthErrorCode.SOCIAL_AUTH_FAILED);
         }
     }
